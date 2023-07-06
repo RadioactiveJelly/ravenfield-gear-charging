@@ -130,7 +130,7 @@ end
 function GearRecharge:OnActorDied(actor, source, isSilent)
 	if isSilent then return end
 
-	if actor.team == Player.actor.team and source and source.isPlayer then
+	if actor.team ~= Player.actor.team and source and source.isPlayer then
 		for i, gear in pairs(self.activeGear) do
 			self:TryRecharge(gear, self.chargePerKill, 1)
 		end
