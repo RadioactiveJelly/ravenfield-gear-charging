@@ -49,8 +49,6 @@ function GearRecharge:Start()
 		end
 	end
 
-	self.multiplierPerRecharge = 1.1
-
 	self.targets.AudioSource.SetOutputAudioMixer(AudioMixer.Important)
 end
 
@@ -60,6 +58,7 @@ function GearRecharge:ParseString(str)
 		local iterations = 0
 		local name = ""
 		local rechargeRequirement = 0
+		local growthMultiplier = 1.1
 
 		--Type 0: Always Charges
 		--Type 1: Kills Only
@@ -70,13 +69,15 @@ function GearRecharge:ParseString(str)
 				if iterations == 0 then name = wrd end
 				if iterations == 1 then rechargeRequirement = tonumber(wrd) end
 				if iterations == 2 then gearType = tonumber(wrd) end
+				if iterations == 3 then growthMultiplier = tonumber(wrd) end
 			end
 			iterations = iterations + 1
-			if(iterations >= 3) then break end
+			if(iterations >= 4) then break end
 		end
 		local data = {}
-		data.rechargeRequirement = rechargeRequirement
 		data.type = gearType
+		data.rechargeRequirement = rechargeRequirement
+		data.growthMultiplier = growthMultiplier
 		self.gearData[name] = data
 
 		--self:Debug("Registered " .. name .. " with mag size of " .. maxAmmo .. " and max spare ammo of " .. maxSpareAmmo)
@@ -111,6 +112,7 @@ function GearRecharge:EvaluateWeapon(weapon)
 			gear.currentCharge = 0
 			gear.type = gearData.type
 			gear.rechargeRequirement = gearData.rechargeRequirement
+			gear.requirementGrowth = gearData.rechargeRequirement * gearData.growthMultiplier
 			self.activeGear[weapon.slot] = gear
 		end
 	end
@@ -154,6 +156,7 @@ function GearRecharge:TryRecharge(gear, amount, typeRequired)
 			self.targets.AudioSource.Play()
 			self.targets.Animator.SetTrigger("Flash")
 			gear.currentCharge = 0
+			gear.rechargeRequirement = gear.rechargeRequirement + gear.requirementGrowth
 
 			if self.quickThrow then
 				self.quickThrow.self:UpdateDisplay()
