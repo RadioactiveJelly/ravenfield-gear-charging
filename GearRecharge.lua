@@ -58,7 +58,7 @@ function GearRecharge:ParseString(str)
 		local iterations = 0
 		local name = ""
 		local rechargeRequirement = 0
-		local growthMultiplier = 1.1
+		local growthMultiplier = 0.1
 
 		--Type 0: Always Charges
 		--Type 1: Kills Only
