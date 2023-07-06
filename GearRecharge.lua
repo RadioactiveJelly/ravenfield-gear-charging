@@ -52,6 +52,16 @@ function GearRecharge:Start()
 	self.targets.AudioSource.SetOutputAudioMixer(AudioMixer.Important)
 end
 
+function GearRecharge:Update()
+	if not Debug.isTestMode then return end
+
+	if(Input.GetKeyDown(KeyCode.T)) then
+		for i, gear in pairs(self.activeGear) do
+			self:TryRecharge(gear, 100, 0)
+		end
+	end
+end
+
 --Parse string lines for weapon data
 function GearRecharge:ParseString(str)
 	for word in string.gmatch(str, '([^,]+)') do
