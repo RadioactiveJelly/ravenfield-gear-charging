@@ -49,6 +49,8 @@ function GearRecharge:Start()
 		end
 	end
 
+	self.multiplierPerRecharge = 1.1
+
 	self.targets.AudioSource.SetOutputAudioMixer(AudioMixer.Important)
 end
 
