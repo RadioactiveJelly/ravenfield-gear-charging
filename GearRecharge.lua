@@ -80,7 +80,6 @@ function GearRecharge:ParseString(str)
 		data.growthMultiplier = growthMultiplier
 		self.gearData[name] = data
 
-		--self:Debug("Registered " .. name .. " with mag size of " .. maxAmmo .. " and max spare ammo of " .. maxSpareAmmo)
 		print("Registered " .. name .. " with recharge requirement of " .. rechargeRequirement .. " with type of " .. gearType)
 	end
 end

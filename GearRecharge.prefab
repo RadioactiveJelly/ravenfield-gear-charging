@@ -71,11 +71,11 @@ MonoBehaviour:
       - id: line1
         displayName: Line 1
         orderPriority: 11
-        value: AMMO BAG|100|0|1.1,MEDIC BAG|100|0|1.1
+        value: AMMO BAG|100|0|0.1,MEDIC BAG|100|0|0.1
       - id: line2
         displayName: Line 2
         orderPriority: 12
-        value: AMMO BOX|100|0|1.1,MEDICAL BOX|100|0|1.1
+        value: AMMO BOX|100|0|0.1,MEDICAL BOX|100|0|0.1
       - id: line3
         displayName: Line 3
         orderPriority: 13
