@@ -45,9 +45,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mutators:
   - name: <color=#12B0FB>Gear Recharge</color>
-    description: 1.1.2
+    description: 1.3.0
     menuImage: {fileID: 2800000, guid: e8f6b5548197b3444a5581fa470c6c61, type: 3}
-    mutatorPrefab: {fileID: 2151941426466491209, guid: 4c7ec6b52a339e2469a409f59095785f, type: 3}
+    mutatorPrefab: {fileID: 2735962980774565099, guid: 9ba45c1adf126f14da5e748875a70f3f, type: 3}
     configuration:
       labels:
       - id: general
@@ -66,6 +66,10 @@ MonoBehaviour:
         displayName: Charge Per Capture Point
         orderPriority: 2
         value: 100
+      - id: ChargePerSecond
+        displayName: Charge Per Second
+        orderPriority: 3
+        value: 2.5
       ranges: []
       strings:
       - id: line1

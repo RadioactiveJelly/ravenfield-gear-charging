@@ -5,25 +5,21 @@ function GearRecharge:Awake()
 	self.gameObject.name = "GearRecharge"
 end
 
-function GearRecharge:Start()
+function GearRecharge:Init(chargePerKill, chargePerCapturePoint, chargePerSecond)
 	-- Run when behaviour is created
 
 	self.hasSpawnedOnce = false
 
 	self.gearData = {}
-	self:ParseString(self.script.mutator.GetConfigurationString("line1"))
-	self:ParseString(self.script.mutator.GetConfigurationString("line2"))
-	self:ParseString(self.script.mutator.GetConfigurationString("line3"))
-	self:ParseString(self.script.mutator.GetConfigurationString("line4"))
-	self:ParseString(self.script.mutator.GetConfigurationString("line5"))
 
 	GameEvents.onActorDied.AddListener(self,"OnActorDied")
 	GameEvents.onActorSpawn.AddListener(self,"OnActorSpawn")
 	GameEvents.onCapturePointCaptured.AddListener(self,"OnCapturePointCaptured")
 
 	self.activeGear = {}
-	self.chargePerKill = self.script.mutator.GetConfigurationFloat("ChargePerKill")
-	self.chargePerCapturePoint = self.script.mutator.GetConfigurationFloat("ChargePerCapturePoint")
+	self.chargePerKill = chargePerKill
+	self.chargePerCapturePoint = chargePerCapturePoint
+	self.chargePerSecond = chargePerSecond
 
 	local function onWeaponReturn(weapon)
 		self:EvaluateWeapon(weapon)
@@ -50,9 +46,20 @@ function GearRecharge:Start()
 	end
 
 	self.targets.AudioSource.SetOutputAudioMixer(AudioMixer.Important)
+
+	self.timer = 0
 end
 
 function GearRecharge:Update()
+
+	self.timer = self.timer + Time.deltaTime
+	if self.timer >= 1 then
+		for i, gear in pairs(self.activeGear) do
+			self:TryRecharge(gear, self.chargePerSecond,{[3] = true, [5] = true, [6] = true})
+		end
+		self.timer = 0
+	end
+
 	if not Debug.isTestMode then return end
 
 	if(Input.GetKeyDown(KeyCode.T)) then
@@ -73,6 +80,10 @@ function GearRecharge:ParseString(str)
 		--Type 0: Always Charges
 		--Type 1: Kills Only
 		--Type 2: Captures Only
+		--Type 3: Time 
+		--Type 4: Kills and Captures Only
+		--Type 5: Kills and Time Only
+		--Type 6: Captures and Time Only
 		local gearType = 0
 		for wrd in string.gmatch(word,'([^|]+)') do
 			if wrd ~= "-" then
@@ -84,14 +95,22 @@ function GearRecharge:ParseString(str)
 			iterations = iterations + 1
 			if(iterations >= 4) then break end
 		end
-		local data = {}
-		data.type = gearType
-		data.rechargeRequirement = rechargeRequirement
-		data.growthMultiplier = growthMultiplier
-		self.gearData[name] = data
-
-		print("Registered " .. name .. " with recharge requirement of " .. rechargeRequirement .. " with type of " .. gearType)
+		self:RegisterWeapon(name, gearType,rechargeRequirement,growthMultiplier)
 	end
+end
+
+function GearRecharge:RegisterWeapon(weaponName, gearType, rechargeRequirement, growthMultiplier)
+	local data = {}
+	data.type = gearType
+	data.rechargeRequirement = rechargeRequirement
+	data.growthMultiplier = growthMultiplier
+	data.chargeMultiplier = 1
+	self.gearData[string.upper(weaponName)] = data
+
+	print("Registered " .. weaponName .. " with recharge requirement of " .. rechargeRequirement .. " with type of " .. gearType)
+end
+
+function GearRecharge:SetChargeMultiplier()
 end
 
 function GearRecharge:OnActorSpawn(actor)
@@ -109,7 +128,7 @@ end
 
 function GearRecharge:EvaluateWeapon(weapon)
 	local cleanName = string.gsub(weapon.weaponEntry.name,"<.->","")
-	local gearData = self.gearData[cleanName]
+	local gearData = self.gearData[string.upper(cleanName)]
 	if gearData then
 		local gear = self.activeGear[weapon.slot]
 		if gear and gear.name == cleanName then
@@ -117,7 +136,7 @@ function GearRecharge:EvaluateWeapon(weapon)
 		else
 			gear = {}
 			gear.weapon = weapon
-			gear.name = cleanName
+			gear.name = string.upper(cleanName)
 			gear.currentCharge = 0
 			gear.type = gearData.type
 			gear.rechargeRequirement = gearData.rechargeRequirement
@@ -131,7 +150,7 @@ function GearRecharge:OnCapturePointCaptured(capturePoint, newOwner)
 	if self.hasSpawnedOnce and not Player.actor.isDead then
 		if Player.actor.currentCapturePoint == capturePoint and Player.actor.team == newOwner then
 			for i, gear in pairs(self.activeGear) do
-				self:TryRecharge(gear, self.chargePerCapturePoint,2)
+				self:TryRecharge(gear, self.chargePerCapturePoint,{[2] = true, [4] = true, [6] = true})
 			end
 		end
 	end
@@ -142,34 +161,67 @@ function GearRecharge:OnActorDied(actor, source, isSilent)
 
 	if actor.team ~= Player.actor.team and source and source.isPlayer then
 		for i, gear in pairs(self.activeGear) do
-			self:TryRecharge(gear, self.chargePerKill, 1)
+			self:TryRecharge(gear, self.chargePerKill, {[1] = true, [4] = true, [5] = true})
 		end
 	elseif actor.isPlayer then
 		self.activeGear = {}
 	end
 end
 
-function GearRecharge:TryRecharge(gear, amount, typeRequired)
+function GearRecharge:TryRecharge(gear, amount, allowedTypes)
 	if gear.weapon == nil then return end
-	if gear.type ~= typeRequired and gear.type ~= 0 then return end
+	if gear.type ~= 0 and not allowedTypes[gear.type] then return end
 
-	if gear.weapon.ammo < gear.weapon.maxAmmo then
-		gear.currentCharge = gear.currentCharge + amount
-		if gear.currentCharge >= gear.rechargeRequirement then
-			if gear.weapon.ammo == - 1 then
-				gear.weapon.ammo = 1
-			else
-				gear.weapon.ammo = gear.weapon.ammo + 1
-			end
-			
-			self.targets.AudioSource.Play()
-			self.targets.Animator.SetTrigger("Flash")
-			gear.currentCharge = 0
-			gear.rechargeRequirement = gear.rechargeRequirement + gear.requirementGrowth
+	local didRecharge = false
+	local multiplier = 1
+	if self.modifiers and self.modifiers[gear.name] then
+		multiplier = self.modifiers[gear.name]
+	end
 
-			if self.quickThrow then
-				self.quickThrow.self:UpdateDisplay()
-			end
+	local weapon = gear.weapon
+	local needsMaxAmmo = weapon.maxSpareAmmo > 0 and weapon.spareAmmo < weapon.maxSpareAmmo
+	local needsAmmo = weapon.ammo < weapon.maxAmmo
+	local needsRecharge = needsMaxAmmo or needsAmmo
+
+	if not needsRecharge then return end
+
+	gear.currentCharge = gear.currentCharge + (amount * multiplier)
+	if gear.currentCharge < gear.rechargeRequirement then return end
+
+	self:ReplenishAmmo(weapon)
+
+	self.targets.AudioSource.Play()
+	self.targets.Animator.SetTrigger("Flash")
+	gear.currentCharge = 0
+	gear.rechargeRequirement = gear.rechargeRequirement + gear.requirementGrowth
+
+	if self.quickThrow then
+		self.quickThrow.self:UpdateDisplay()
+	end
+end
+
+function GearRecharge:ReplenishAmmo(weapon)
+	if weapon == nil then return end
+
+	if weapon.maxSpareAmmo > 0 and weapon.spareAmmo < weapon.maxSpareAmmo then
+		weapon.spareAmmo = weapon.spareAmmo + 1
+	elseif weapon.ammo < weapon.maxAmmo then
+		if weapon.ammo == -1 then
+			weapon.ammo = 1
+		else
+			weapon.ammo = weapon.ammo + 1
 		end
 	end
+end
+
+function GearRecharge:ClearData()
+	self.gearData = {}
+	self.modifiers = {}
+end
+
+function GearRecharge:AddModifier(weaponName, multiplier)
+	if self.modifiers == nil then
+		self.modifiers = {}
+	end
+	self.modifiers[string.upper(weaponName)] = multiplier
 end
